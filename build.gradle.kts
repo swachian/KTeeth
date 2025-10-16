@@ -8,7 +8,8 @@ group = "io.github.sw"
 version = "0.0.1"
 
 application {
-    mainClass = "io.ktor.server.jetty.jakarta.EngineMain"
+//    mainClass = "io.ktor.server.jetty.jakarta.EngineMain"
+    mainClass = "io.github.sw.ApplicationKt"
 }
 
 dependencies {
@@ -22,8 +23,9 @@ dependencies {
     implementation(libs.ktor.server.kafka)
     implementation(libs.ktor.client.core)
     implementation(libs.exposed.core)
+    implementation(libs.exposed.dao)
     implementation(libs.exposed.jdbc)
-    implementation(libs.h2)
+    implementation(libs.mysql)
     implementation(libs.ktor.serialization.jackson)
     implementation(libs.ktor.server.metrics)
     implementation(libs.ktor.server.call.id)

@@ -55,11 +55,16 @@ fun Application.configureDatabases() {
             // MyRecord::class at myTopic // <-- Will register schema upon startup
         }
     }
+    val host = System.getenv("DB_HOST") ?: "localhost"
+    val port = System.getenv("DB_PORT") ?: 3306
+    val dbName = System.getenv("DB_NAME") ?:  "kteeth"
+    val dbUser = System.getenv("DB_USER") ?: "root"
+    val dbPassword = System.getenv("DB_PASSWORD") ?: "root"
     val database = Database.connect(
-        url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1",
-        user = "root",
-        driver = "org.h2.Driver",
-        password = "",
+        url = "jdbc:mysql://$host:$port/$dbName",
+        user = dbUser,  //
+        driver = "com.mysql.cj.jdbc.Driver",
+        password = dbPassword,
     )
     val userService = UserService(database)
     routing {
