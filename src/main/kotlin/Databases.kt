@@ -1,5 +1,7 @@
 package io.github.sw
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.github.flaxoos.ktor.server.plugins.kafka.Kafka
 import io.github.flaxoos.ktor.server.plugins.kafka.MessageTimestampType
 import io.github.flaxoos.ktor.server.plugins.kafka.TopicName
@@ -60,12 +62,34 @@ fun Application.configureDatabases() {
     val dbName = System.getenv("DB_NAME") ?:  "kteeth"
     val dbUser = System.getenv("DB_USER") ?: "root"
     val dbPassword = System.getenv("DB_PASSWORD") ?: "root"
+    val dbConfig = environment.config.config("ktor.database")
+    val hikariConfig = HikariConfig().apply {
+        jdbcUrl = "jdbc:mysql://$host:$port/$dbName"
+        username = dbUser
+        password = dbPassword
+        driverClassName = "com.mysql.cj.jdbc.Driver"
+
+        // 连接池配置
+        maximumPoolSize = dbConfig.property("pool.maximumPoolSize").getString().toInt()
+        minimumIdle = dbConfig.property("pool.minimumIdle").getString().toInt()
+        maxLifetime = dbConfig.property("pool.maxLifetime").getString().toLong()
+        connectionTimeout = dbConfig.property("pool.connectionTimeout").getString().toLong()
+        idleTimeout = dbConfig.property("pool.idleTimeout").getString().toLong()
+        validationTimeout = dbConfig.property("pool.validationTimeout").getString().toLong()
+        leakDetectionThreshold = dbConfig.property("pool.leakDetectionThreshold").getString().toLong()
+
+        connectionTestQuery = "SELECT 1"
+
+        // MySQL 优化属性
+        val properties = dbConfig.config("properties")
+        properties.keys().forEach { key ->
+            addDataSourceProperty(key, properties.property(key).getString())
+        }
+    }
     val database = Database.connect(
-        url = "jdbc:mysql://$host:$port/$dbName",
-        user = dbUser,  //
-        driver = "com.mysql.cj.jdbc.Driver",
-        password = dbPassword,
+        HikariDataSource(hikariConfig)
     )
+
     val userService = UserService(database)
     routing {
         // Create user

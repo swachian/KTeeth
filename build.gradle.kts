@@ -25,6 +25,8 @@ dependencies {
     implementation(libs.exposed.core)
     implementation(libs.exposed.dao)
     implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.java.time)
+    implementation(libs.hikaricp)
     implementation(libs.mysql)
     implementation(libs.ktor.serialization.jackson)
     implementation(libs.ktor.server.metrics)

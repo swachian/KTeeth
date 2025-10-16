@@ -8,9 +8,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Application.configureSerialization() {
+    // To serialize responses to json when an object is responsed.
     install(ContentNegotiation) {
         jackson {
-                enable(SerializationFeature.INDENT_OUTPUT)
+//                enable(SerializationFeature.INDENT_OUTPUT)
             }
     }
     routing {

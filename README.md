@@ -50,8 +50,12 @@ To build or run the project, use one of the following tasks:
 If the server starts successfully, you'll see the following output:
 
 ```
-2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
-2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
+2025-10-16 15:31:02.442 [main]  INFO  Application - Application started in 1.853 seconds.
+2025-10-16 15:31:02.457 [main]  INFO  org.eclipse.jetty.server.Server - jetty-12.0.25; built: 2025-08-11T23:52:37.219Z; git: a862b76d8372e24205765182d9ae1d1d333ce2ea; jvm 24.0.2+12-54
+2025-10-16 15:31:02.495 [main]  INFO  o.e.jetty.server.AbstractConnector - Started ServerConnector@274bae2c{HTTP/1.1, (http/1.1, h2c)}{0.0.0.0:8080}
+2025-10-16 15:31:02.502 [main]  INFO  org.eclipse.jetty.server.Server - Started oejs.Server@50ff7063{STARTING}[12.0.25,sto=0] @2525ms
+2025-10-16 15:31:11.205 [metrics-logger-reporter-1-thread-1]  INFO  Application - type=GAUGE, name=jvm.attributes.name, value=16292@MinisForum870
+20
 ```
 
 ## Traps
@@ -59,3 +63,59 @@ If the server starts successfully, you'll see the following output:
 The version file is located at gradle/libs.versions.toml so that all versions can be written to one file.  
 In the `build.gradle.kts` file, ` implementation(libs.ktor.server.content.negotiation)` means fetch the info from the libs.  
 There is a little surprise.
+
+```kotlin
+application {
+//    mainClass = "io.ktor.server.jetty.jakarta.EngineMain"
+    mainClass = "io.github.sw.ApplicationKt"
+}
+```
+Both of them can serve as mainClass statement. The modules need loading is defined in application.yml  
+```yaml
+ktor:
+  application:
+    modules:
+      - io.github.sw.ApplicationKt.module
+```
+
+Modules are defined with extension funs.   
+```kotlin
+fun Application.configureRouting() {
+    install(StatusPages) {
+        exception<Throwable> { call, cause ->
+            call.respondText(text = "500: $cause" , status = HttpStatusCode.InternalServerError)
+        }
+    }
+    install(SSE)
+    routing {
+        get("/") {
+            call.respondText("Hello World!")
+        }
+        sse("/hello") {
+            send(ServerSentEvent("world"))
+        }
+    }
+}
+```
+
+Serialization use extension function as well.
+```kotlin
+fun Application.configureSerialization() {
+    // To serialize responses to json when an object is responsed.
+    install(ContentNegotiation) {
+        jackson {
+                enable(SerializationFeature.INDENT_OUTPUT)
+            }
+    }
+    routing {
+        get("/json/kotlinx-serialization") {
+            call.respond(mapOf("hello" to "world"))
+        }
+        get("/json/jackson") {
+                call.respond(mapOf("hello" to "world"))
+            }
+    }
+}
+```
+
+Use mysql with a connection pool instead of h2 in the project.
