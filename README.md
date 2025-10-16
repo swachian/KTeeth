@@ -118,4 +118,36 @@ fun Application.configureSerialization() {
 }
 ```
 
-Use mysql with a connection pool instead of h2 in the project.
+Use mysql with a connection pool instead of h2 in the project. In order to monit the status of the connection pool, add an action `/health`. As the action is in another kt file, datasource has to be exposed to the other file. KOIN is used. 
+```kotlin
+fun Application.configureFrameworks() {
+    install(Koin) {
+        slf4jLogger()
+        modules(module {
+            single<HelloService> {
+                HelloService {
+                    println(environment.log.info("Hello, World!"))
+                }
+            }
+            // register datasource
+            single { datasource }
+        })
+    }
+}
+
+fun Application.configureMonitoringRoutes() {
+    // inject the datasource
+    val datasource: DataSource by inject()
+    routing {
+        get("/health") {
+            val metrics = mapOf(
+                "database" to monitorConnectionPool(datasource as HikariDataSource),
+                "timestamp" to System.currentTimeMillis(),
+                "status" to "healthy"
+            )
+            call.respond(metrics)
+        }
+    }
+
+}
+```
