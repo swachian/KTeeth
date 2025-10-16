@@ -54,3 +54,8 @@ If the server starts successfully, you'll see the following output:
 2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
 ```
 
+## Traps
+
+The version file is located at gradle/libs.versions.toml so that all versions can be written to one file.  
+In the `build.gradle.kts` file, ` implementation(libs.ktor.server.content.negotiation)` means fetch the info from the libs.  
+There is a little surprise.
