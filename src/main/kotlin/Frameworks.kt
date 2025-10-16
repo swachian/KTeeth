@@ -14,6 +14,7 @@ fun Application.configureFrameworks() {
                     println(environment.log.info("Hello, World!"))
                 }
             }
+            single { datasource }
         })
     }
 }

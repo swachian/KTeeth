@@ -20,8 +20,46 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.*
+import javax.sql.DataSource
+
+fun loadDataSource(environment: ApplicationEnvironment): HikariDataSource {
+    val host = System.getenv("DB_HOST") ?: "localhost"
+    val port = System.getenv("DB_PORT") ?: 3306
+    val dbName = System.getenv("DB_NAME") ?:  "kteeth"
+    val dbUser = System.getenv("DB_USER") ?: "root"
+    val dbPassword = System.getenv("DB_PASSWORD") ?: "root"
+    val dbConfig = environment.config.config("ktor.database")
+    val hikariConfig = HikariConfig().apply {
+        jdbcUrl = "jdbc:mysql://$host:$port/$dbName"
+        username = dbUser
+        password = dbPassword
+        driverClassName = "com.mysql.cj.jdbc.Driver"
+
+        // 连接池配置
+        maximumPoolSize = dbConfig.property("pool.maximumPoolSize").getString().toInt()
+        minimumIdle = dbConfig.property("pool.minimumIdle").getString().toInt()
+        maxLifetime = dbConfig.property("pool.maxLifetime").getString().toLong()
+        connectionTimeout = dbConfig.property("pool.connectionTimeout").getString().toLong()
+        idleTimeout = dbConfig.property("pool.idleTimeout").getString().toLong()
+        validationTimeout = dbConfig.property("pool.validationTimeout").getString().toLong()
+        leakDetectionThreshold = dbConfig.property("pool.leakDetectionThreshold").getString().toLong()
+
+        connectionTestQuery = "SELECT 1"
+
+        // MySQL 优化属性
+        val properties = dbConfig.config("properties")
+        properties.keys().forEach { key ->
+            addDataSourceProperty(key, properties.property(key).getString())
+        }
+    }
+    val datasource = HikariDataSource(hikariConfig)
+    return datasource
+}
+
+lateinit var datasource : DataSource
 
 fun Application.configureDatabases() {
+    environment
     install(Kafka) {
         schemaRegistryUrl = "my.schemaRegistryUrl"
         val myTopic = TopicName.named("my-topic")
@@ -57,37 +95,10 @@ fun Application.configureDatabases() {
             // MyRecord::class at myTopic // <-- Will register schema upon startup
         }
     }
-    val host = System.getenv("DB_HOST") ?: "localhost"
-    val port = System.getenv("DB_PORT") ?: 3306
-    val dbName = System.getenv("DB_NAME") ?:  "kteeth"
-    val dbUser = System.getenv("DB_USER") ?: "root"
-    val dbPassword = System.getenv("DB_PASSWORD") ?: "root"
-    val dbConfig = environment.config.config("ktor.database")
-    val hikariConfig = HikariConfig().apply {
-        jdbcUrl = "jdbc:mysql://$host:$port/$dbName"
-        username = dbUser
-        password = dbPassword
-        driverClassName = "com.mysql.cj.jdbc.Driver"
 
-        // 连接池配置
-        maximumPoolSize = dbConfig.property("pool.maximumPoolSize").getString().toInt()
-        minimumIdle = dbConfig.property("pool.minimumIdle").getString().toInt()
-        maxLifetime = dbConfig.property("pool.maxLifetime").getString().toLong()
-        connectionTimeout = dbConfig.property("pool.connectionTimeout").getString().toLong()
-        idleTimeout = dbConfig.property("pool.idleTimeout").getString().toLong()
-        validationTimeout = dbConfig.property("pool.validationTimeout").getString().toLong()
-        leakDetectionThreshold = dbConfig.property("pool.leakDetectionThreshold").getString().toLong()
-
-        connectionTestQuery = "SELECT 1"
-
-        // MySQL 优化属性
-        val properties = dbConfig.config("properties")
-        properties.keys().forEach { key ->
-            addDataSourceProperty(key, properties.property(key).getString())
-        }
-    }
+    datasource = loadDataSource(environment)
     val database = Database.connect(
-        HikariDataSource(hikariConfig)
+        datasource
     )
 
     val userService = UserService(database)
