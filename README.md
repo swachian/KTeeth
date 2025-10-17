@@ -188,3 +188,9 @@ routing {
     userRoutes.run { configUserRoutes() }
 }
 ```
+
+### About the DB and db driver
+
+Unfortunately, Exposed or Ktorm is based on JDBC so they are not coroutine friendly. Although R2DBC has been designed 
+for async IO, there hasn't been any ORM framework based on R2DBC now. Currently, we have to stick to JDBC, a synchronized db driver.
+
