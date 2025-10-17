@@ -1,4 +1,4 @@
-package io.github.sw
+package io.github.sw.infras
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm

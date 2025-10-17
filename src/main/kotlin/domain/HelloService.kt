@@ -1,4 +1,4 @@
-package io.github.sw
+package io.github.sw.domain
 
 fun interface HelloService {
     fun sayHello()

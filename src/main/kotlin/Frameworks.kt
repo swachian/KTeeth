@@ -1,5 +1,7 @@
 package io.github.sw
 
+import io.github.sw.db.datasource
+import io.github.sw.domain.HelloService
 import io.ktor.server.application.*
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin

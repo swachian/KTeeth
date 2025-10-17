@@ -1,4 +1,4 @@
-package io.github.sw
+package io.github.sw.infras
 
 import com.codahale.metrics.*
 import io.ktor.http.*

@@ -1,6 +1,5 @@
-package io.github.sw
+package io.github.sw.infras
 
-import com.fasterxml.jackson.databind.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*

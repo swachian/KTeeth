@@ -1,4 +1,4 @@
-package io.github.sw
+package io.github.sw.db
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -13,6 +13,8 @@ import io.github.flaxoos.ktor.server.plugins.kafka.consumerRecordHandler
 import io.github.flaxoos.ktor.server.plugins.kafka.producer
 import io.github.flaxoos.ktor.server.plugins.kafka.registerSchemas
 import io.github.flaxoos.ktor.server.plugins.kafka.topic
+import io.github.sw.domain.ExposedUser
+import io.github.sw.domain.UserService
 import io.ktor.client.*
 import io.ktor.http.*
 import io.ktor.server.application.*

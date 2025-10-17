@@ -46,3 +46,17 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 }
+
+tasks.withType<JavaExec>().configureEach {
+    jvmArgs = listOf(
+        "--add-opens",
+        "java.base/java.lang=org.fusesource.jansi"
+    )
+}
+
+tasks.withType<Test>().configureEach {
+    jvmArgs = listOf(
+        "--add-opens",
+        "java.base/java.lang=org.fusesource.jansi"
+    )
+}

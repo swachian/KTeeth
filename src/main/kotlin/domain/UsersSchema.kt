@@ -1,4 +1,4 @@
-package io.github.sw
+package io.github.sw.domain
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable

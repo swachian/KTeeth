@@ -1,4 +1,4 @@
-package io.github.sw
+package io.github.sw.controllers.routes
 
 import io.ktor.http.*
 import io.ktor.server.application.*

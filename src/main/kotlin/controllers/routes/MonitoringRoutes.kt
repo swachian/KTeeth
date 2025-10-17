@@ -1,4 +1,4 @@
-package io.github.sw
+package io.github.sw.controllers.routes
 
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.application.Application
