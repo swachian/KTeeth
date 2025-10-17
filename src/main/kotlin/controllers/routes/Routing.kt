@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.*
 import io.ktor.sse.*
+import kotlinx.coroutines.delay
 import org.jetbrains.exposed.sql.Database
 import org.koin.ktor.ext.inject
 import javax.sql.DataSource
@@ -31,6 +32,10 @@ fun Application.configureRouting() {
         }
         sse("/hello") {
             send(ServerSentEvent("world"))
+            while(true) {
+                send(ServerSentEvent(System.currentTimeMillis().toString()))
+                delay(1000)
+            }
         }
 
         val userService = UserService(database)

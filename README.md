@@ -214,3 +214,8 @@ wash with logging.
 2025-10-17 20:36:24.067 [ktor-jetty-8080-5] aeeeb4b7-d6bd-4688-992e-6e0cf1bd2325 INFO  Application - 200 OK: GET - /users in 257ms
 ```
 
+### SSE
+
+This is a technology keeping connections between a client and server. However, unlike websocket, only the server side can 
+send msg to the client. In the years without NIO, it's almost impossible to keep so many connections. Now it's easier for 
+a server to keep in touch with clients than past, for ktor uses coroutines and NIO. Many fds still need opening.
