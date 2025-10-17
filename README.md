@@ -151,3 +151,40 @@ fun Application.configureMonitoringRoutes() {
 
 }
 ```
+
+### Routes
+
+UserService is injected into UserRoutes. An extension function of Root is declared in the UserRoutes for it will use 
+UserService. However, as the function is defined in the class, it can only be called in the scope of the instance of UserRoutes.
+
+To do so, a standard high order function in the stdlib, `run` is used in the common routing file to call `configUserRoutes` 
+of userRoutines instance.
+
+
+```kotlin
+class UserRoutes(val userService: UserService) {
+    fun Route.configUserRoutes() {
+
+        route("/users") {
+            get {
+                val users = userService.read()
+                call.respond(users)
+            }
+
+        }
+    }
+}
+
+routing {
+    get("/") {
+        call.respondText("Hello World!")
+    }
+    sse("/hello") {
+        send(ServerSentEvent("world"))
+    }
+
+    val userService = UserService(database)
+    val userRoutes = UserRoutes(userService)
+    userRoutes.run { configUserRoutes() }
+}
+```
