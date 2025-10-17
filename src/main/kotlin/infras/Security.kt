@@ -48,7 +48,11 @@ fun Application.configureSecurity() {
         originMatchesHost()
     
         // custom header checks
-        checkHeader("X-CSRF-Token")
+//        checkHeader("X-CSRF-Token")
+
+        onFailure {
+            respond(HttpStatusCode.Forbidden, "CSRF token invalid")
+        }
     }
     authentication {
         oauth("auth-oauth-google") {

@@ -8,7 +8,7 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.jetbrains.exposed.sql.transactions.transaction
 
 @Serializable
-data class ExposedUser(val name: String, val age: Int)
+data class ExposedUser(val name: String, val age: Int, val id: Int = 0)
 
 class UserService(database: Database) {
     object Users : Table() {
@@ -36,8 +36,17 @@ class UserService(database: Database) {
         return dbQuery {
             Users.selectAll()
                 .where { Users.id eq id }
-                .map { ExposedUser(it[Users.name], it[Users.age]) }
+                .map { ExposedUser(it[Users.name], it[Users.age], it[Users.id]) }
                 .singleOrNull()
+        }
+    }
+
+    suspend fun read(): List<ExposedUser> {
+        return dbQuery {
+            Users.selectAll()
+                .limit(10)
+                .map { ExposedUser(it[Users.name], it[Users.age], it[Users.id]) }
+                .toList()
         }
     }
 
