@@ -21,9 +21,8 @@ fun Application.configureMonitoring() {
     }
     install(CallId) {
         header(HttpHeaders.XRequestId)
-        verify { callId: String ->
-            callId.isNotEmpty()
-        }
+        generate { java.util.UUID.randomUUID().toString() }
+        verify { it.isNotEmpty() }
     }
     install(CallLogging) {
         callIdMdc("call-id")

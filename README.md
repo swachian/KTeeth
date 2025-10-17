@@ -194,3 +194,23 @@ routing {
 Unfortunately, Exposed or Ktorm is based on JDBC so they are not coroutine friendly. Although R2DBC has been designed 
 for async IO, there hasn't been any ORM framework based on R2DBC now. Currently, we have to stick to JDBC, a synchronized db driver.
 
+### Call Logging and Call Id
+
+The second statement `generate` has to be added, or if there is no request id from a client, call id is missing and it won't
+wash with logging.  
+
+```kotlin
+    install(CallId) {
+        header(HttpHeaders.XRequestId)
+        generate { java.util.UUID.randomUUID().toString() }
+        verify { it.isNotEmpty() }
+    }
+    install(CallLogging) {
+        callIdMdc("call-id")
+    }
+```
+
+```text
+2025-10-17 20:36:24.067 [ktor-jetty-8080-5] aeeeb4b7-d6bd-4688-992e-6e0cf1bd2325 INFO  Application - 200 OK: GET - /users in 257ms
+```
+
