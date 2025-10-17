@@ -14,10 +14,10 @@ fun Application.configureMonitoring() {
     install(DropwizardMetrics) {
         Slf4jReporter.forRegistry(registry)
             .outputTo(this@configureMonitoring.log)
-            .convertRatesTo(TimeUnit.SECONDS)
-            .convertDurationsTo(TimeUnit.MILLISECONDS)
+//            .convertRatesTo(TimeUnit.SECONDS)
+//            .convertDurationsTo(TimeUnit.MILLISECONDS)
             .build()
-            .start(10, TimeUnit.SECONDS)
+            .start(2, TimeUnit.MINUTES)
     }
     install(CallId) {
         header(HttpHeaders.XRequestId)

@@ -219,3 +219,9 @@ wash with logging.
 This is a technology keeping connections between a client and server. However, unlike websocket, only the server side can 
 send msg to the client. In the years without NIO, it's almost impossible to keep so many connections. Now it's easier for 
 a server to keep in touch with clients than past, for ktor uses coroutines and NIO. Many fds still need opening.
+
+
+### Hot Reload
+
+If the idea is running in debug mode, Rebuild the file changed can reload the changed class to JVM.
+

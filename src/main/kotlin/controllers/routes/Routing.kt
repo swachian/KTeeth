@@ -38,6 +38,9 @@ fun Application.configureRouting() {
             }
         }
 
+        get("/test") {
+            call.respond("test2")
+        }
         val userService = UserService(database)
         val userRoutes = UserRoutes(userService)
         userRoutes.run { configUserRoutes() }
