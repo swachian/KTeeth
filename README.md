@@ -16,7 +16,6 @@ Here's a list of features included in this project:
 | [Routing](https://start.ktor.io/p/routing)                             | Provides a structured routing DSL                                                  |
 | [kotlinx.serialization](https://start.ktor.io/p/kotlinx-serialization) | Handles JSON serialization using kotlinx.serialization library                     |
 | [Call Logging](https://start.ktor.io/p/call-logging)                   | Logs client requests                                                               |
-| [Authentication](https://start.ktor.io/p/auth)                         | Provides extension point for handling the Authorization header                     |
 | [Koin](https://start.ktor.io/p/koin)                                   | Provides dependency injection                                                      |
 | [Kafka](https://start.ktor.io/p/ktor-server-kafka)                     | Adds Kafka support to your application                                             |
 | [Exposed](https://start.ktor.io/p/exposed)                             | Adds Exposed database to your application                                          |
@@ -27,6 +26,7 @@ Here's a list of features included in this project:
 | [Server-Sent Events (SSE)](https://start.ktor.io/p/sse)                | Support for server push events                                                     |
 | [Default Headers](https://start.ktor.io/p/default-headers)             | Adds a default set of headers to HTTP responses                                    |
 | [OpenAPI](https://start.ktor.io/p/openapi)                             | Serves OpenAPI documentation                                                       |
+| [Authentication](https://start.ktor.io/p/auth)                         | Provides extension point for handling the Authorization header                     |
 | [Authentication Basic](https://start.ktor.io/p/auth-basic)             | Handles 'Basic' username / password authentication scheme                          |
 | [Sessions](https://start.ktor.io/p/ktor-sessions)                      | Adds support for persistent sessions through cookies or headers                    |
 | [CSRF](https://start.ktor.io/p/csrf)                                   | Cross-site request forgery mitigation                                              |
