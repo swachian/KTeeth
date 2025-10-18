@@ -225,3 +225,17 @@ a server to keep in touch with clients than past, for ktor uses coroutines and N
 
 If the idea is running in debug mode, Rebuild the file changed can reload the changed class to JVM.
 
+### OpenAPI Doc
+
+Running `.\gradlew buildOpenApi` generates a json file `generated.json` at `build\ktor\openapi`. 
+You can tell the ktor to read the json in this way. 
+`build\ktor` seems to be one of a couple of prefixes which merge together into resources.
+
+```kotlin
+   routing {
+        openAPI(path = "openapi", swaggerFile = "openapi/generated.json")
+    }
+```
+
+This doc doesn't look good. It's not as good as swagger ui or redoc. Maybe I miss something.
+
