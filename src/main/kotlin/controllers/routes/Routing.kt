@@ -1,5 +1,7 @@
 package io.github.sw.controllers.routes
 
+import io.github.sw.controllers.auth.AuthTypeConsts.SESSION_AUTH
+import io.github.sw.controllers.auth.UserSession
 import io.github.sw.domain.UserService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -13,6 +15,10 @@ import org.jetbrains.exposed.sql.Database
 import org.koin.ktor.ext.inject
 import javax.sql.DataSource
 import kotlin.getValue
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.principal
+
+
 
 fun Application.configureRouting() {
     val datasource: DataSource by inject()
@@ -44,6 +50,13 @@ fun Application.configureRouting() {
         val userService = UserService(database)
         val userRoutes = UserRoutes(userService)
         userRoutes.run { configUserRoutes() }
+
+        authenticate(SESSION_AUTH) {
+            get("/private/info") {
+                val userSession = call.principal<UserSession>()
+                call.respondText("Private info — ${userSession?.userId}.")
+            }
+        }
     }
 }
 

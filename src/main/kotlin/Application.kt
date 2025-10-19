@@ -5,7 +5,7 @@ import io.github.sw.controllers.routes.configureMonitoringRoutes
 import io.github.sw.controllers.routes.configureRouting
 import io.github.sw.db.configureDatabases
 import io.github.sw.infras.configureMonitoring
-import io.github.sw.infras.configureSecurity
+import io.github.sw.controllers.auth.configureSecurity
 import io.github.sw.infras.configureSerialization
 import io.ktor.server.application.*
 

@@ -118,6 +118,8 @@ fun Application.configureSerialization() {
 }
 ```
 
+### Datasource
+
 Use mysql with a connection pool instead of h2 in the project. In order to monit the status of the connection pool, add an action `/health`. As the action is in another kt file, datasource has to be exposed to the other file. KOIN is used. 
 ```kotlin
 fun Application.configureFrameworks() {
@@ -238,4 +240,95 @@ You can tell the ktor to read the json in this way.
 ```
 
 This doc doesn't look good. It's not as good as swagger ui or redoc. Maybe I miss something.
+
+### Authentication and authorization 
+
+1. To enable session authentication, at first you need to install sessions. The following code enable `Sessions` and tell 
+ktor that session is to be stored in cookie and the key of the cookie.
+
+
+```kotlin
+    install(Sessions) {
+    cookie<UserSession>("MY_SESSION") {
+        cookie.extensions["SameSite"] = "lax"
+        cookie.path = "/"
+    }
+}
+
+```
+
+Meanwhile, you'd better define a session data class of you own.
+
+```kotlin
+@Serializable
+data class UserSession(
+    val userId: String,
+    val role: String
+) {
+    // secondary constructor
+    constructor(accessToken: String) : this(
+        userId = extractUserIdFromToken(accessToken),
+        role = extractRoleFromToken(accessToken)
+    )
+
+    companion object {
+        private fun extractUserIdFromToken(token: String): String {
+            return token.substringBefore("-") // 示例逻辑
+        }
+
+        private fun extractRoleFromToken(token: String): String {
+            return token.substringAfter("-") // 示例逻辑
+        }
+    }
+}
+```
+
+2. You need an action to create a session. In the project, `loginSession` is used. The action is not pretected by any authentication for 
+at the time it is accessed, the user should not have been authenticated.
+
+```kotlin
+routing {
+    post("/loginSession") {
+        val params = call.receiveParameters()
+        val username = params["username"] ?: "guest"
+        val role = if (username == "admin") "ADMIN" else "USER"
+        val session = UserSession(userId = username, role = role)
+        call.sessions.set(session)
+        call.respondText("Session of ${session.userId} as ${session.role} ")
+    }
+}
+```
+
+3. `authencation session` is enabled to tell ktor how to validate session and what will be return if the validation fails.
+In the `challenge`, unauthorized result will be returned. As the project is about an api server demo, it doesn't redirect to another action to ask a user for inputs.
+
+```kotlin
+ authentication {
+        session<UserSession>(SESSION_AUTH) {
+            validate { session ->
+                if (session != null) {
+                    session
+                } else {
+                    null
+                }
+            }
+
+            challenge {
+                call.respond(HttpStatusCode.Unauthorized, "Please login first.")
+            }
+        }
+    }
+```
+
+4. `authenticate` operation needs adding before actions that need authentication. With the method, a request has to pass the validation of SESSION_AUTH 
+before it arrives the action. Since kt is such a DSL friendly language, it's so elegant and smart that the solution is adequate for now.
+
+```kotlin
+        authenticate(SESSION_AUTH) {
+            get("/private/info") {
+                val userSession = call.principal<UserSession>()
+                call.respondText("Private info — ${userSession?.userId}.")
+            }
+        }
+```
 
