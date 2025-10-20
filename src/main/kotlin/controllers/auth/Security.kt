@@ -1,5 +1,6 @@
 package io.github.sw.controllers.auth
 
+import com.auth0.jwk.JwkProviderBuilder
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.github.sw.controllers.auth.AuthTypeConsts.BASIC_AUTH
@@ -10,11 +11,20 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.request.receiveParameters
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.serialization.Serializable
+import java.io.File
+import java.security.KeyFactory
+import java.security.interfaces.RSAPrivateKey
+import java.security.interfaces.RSAPublicKey
+import java.security.spec.PKCS8EncodedKeySpec
+import java.util.Date
+import java.util.concurrent.TimeUnit
+import kotlin.io.encoding.Base64
 
 object AuthTypeConsts {
     const val BASIC_AUTH = "basic-auth"
@@ -79,22 +89,29 @@ fun Application.configureSecurity() {
         }
     }
     // Please read the jwt property from the config file if you are using EngineMain
-    val jwtAudience = "jwt-audience"
-    val jwtDomain = "https://jwt-provider-domain/"
-    val jwtRealm = "ktor sample app"
-    val jwtSecret = "secret"
+    val privateKeyString = environment.config.property("jwt.privateKey").getString()
+    val issuer = environment.config.property("jwt.issuer").getString()
+    val audience = environment.config.property("jwt.audience").getString()
+    val jwtRealm = environment.config.property("jwt.realm").getString()
+    val jwkProvider = JwkProviderBuilder(issuer)
+        .cached(10, 24, TimeUnit.HOURS)
+        .rateLimited(10, 1, TimeUnit.MINUTES)
+        .build()
     authentication {
-        jwt {
+        jwt("auth-jwt") {
             realm = jwtRealm
-            verifier(
-                JWT
-                    .require(Algorithm.HMAC256(jwtSecret))
-                    .withAudience(jwtAudience)
-                    .withIssuer(jwtDomain)
-                    .build()
-            )
+            verifier(jwkProvider, issuer) {
+                acceptLeeway(3)
+            }
             validate { credential ->
-                if (credential.payload.audience.contains(jwtAudience)) JWTPrincipal(credential.payload) else null
+                if (credential.payload.getClaim("username").asString() != "") {
+                    JWTPrincipal(credential.payload)
+                } else {
+                    null
+                }
+            }
+            challenge { defaultScheme, realm ->
+                call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired")
             }
         }
     }
@@ -133,11 +150,25 @@ fun Application.configureSecurity() {
             val params = call.receiveParameters()
             val username = params["username"] ?: "guest"
             val role = if (username == "admin") "ADMIN" else "USER"
+            fun makeJwtToken(): String {
+                val publicKey = jwkProvider.get("6f8856ed-9189-488f-9011-0ff4b6c08edc").publicKey
+                val keySpecPKCS8 = PKCS8EncodedKeySpec(Base64.decode(privateKeyString))
+                val privateKey = KeyFactory.getInstance("RSA").generatePrivate(keySpecPKCS8)
+                val token = JWT.create()
+                    .withAudience(audience)
+                    .withIssuer(issuer)
+                    .withClaim("username",username)
+                    .withExpiresAt(Date(System.currentTimeMillis() + 60000))
+                    .sign(Algorithm.RSA256(publicKey as RSAPublicKey, privateKey as RSAPrivateKey))
+                return token
+            }
+
             val session = UserSession(userId = username, role = role)
             call.sessions.set(session)
-            call.respondText("Session of ${session.userId} as ${session.role} ")
+            call.respond(hashMapOf("token" to makeJwtToken()))
         }
 
+        staticFiles(".well-known", File("certs"), "jwks.json")
 
         authenticate("auth-oauth-google") {
             get("login") {

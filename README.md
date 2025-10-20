@@ -1,6 +1,7 @@
 # KTeeth
 
-This project was created using the [Ktor Project Generator](https://start.ktor.io).
+This project is about an API server demo written with Kotlin and Ktor. 
+It was created using the [Ktor Project Generator](https://start.ktor.io).
 
 Here are some useful links to get you started:
 
@@ -332,3 +333,82 @@ before it arrives the action. Since kt is such a DSL friendly language, it's so 
         }
 ```
 
+#### JWT
+
+There are two types of algorithms used in JWT: symmetric and asymmetric encryption.
+The symmetric one is HS256, which shares a common secret among all nodes.  
+The asymmetric one is RS256, which provides an endpoint to share public key with other nodes. The other nodes need to acquire the public key regularly.
+
+In the project, asymmetric encryption algorithm is used.
+
+When it is issued, it needs to be sent back again in header `Authorization: Bearer <token>`. The ktor jwt module checks the header too.
+However, it may be set in cookie as well, only if the server checks the cookie. The standard operation is to put it in the header.
+
+1. The private key will be used in login action.  
+2. jwkProvider is used to get a public key which is used to verify the signature in a jwt. 
+3. acceptLeeway(3) means that it can accept +-3 secondes time difference.  
+4. You can put you business logic in validate lambda.  
+5. If the verification or validating fails, the content in challenge will be returned to the client. 
+
+```kotlin
+ // Please read the jwt property from the config file if you are using EngineMain
+    val privateKeyString = environment.config.property("jwt.privateKey").getString()
+    val issuer = environment.config.property("jwt.issuer").getString()
+    val audience = environment.config.property("jwt.audience").getString()
+    val jwtRealm = environment.config.property("jwt.realm").getString()
+    val jwkProvider = JwkProviderBuilder(issuer)
+        .cached(10, 24, TimeUnit.HOURS)
+        .rateLimited(10, 1, TimeUnit.MINUTES)
+        .build()
+    authentication {
+        jwt("auth-jwt") {
+            realm = jwtRealm
+            verifier(jwkProvider, issuer) {
+                acceptLeeway(3)
+            }
+            validate { credential ->
+                if (credential.payload.getClaim("username").asString() != "") {
+                    JWTPrincipal(credential.payload)
+                } else {
+                    null
+                }
+            }
+            challenge { defaultScheme, realm ->
+                call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired")
+            }
+        }
+    }
+```
+
+In the loginSession, now a jwt can be returned to the client. Meanwhile, a session is set as well.  
+
+```kotlin
+post("/loginSession") {
+            val params = call.receiveParameters()
+            val username = params["username"] ?: "guest"
+            val role = if (username == "admin") "ADMIN" else "USER"
+            fun makeJwtToken(): String {
+                val publicKey = jwkProvider.get("6f8856ed-9189-488f-9011-0ff4b6c08edc").publicKey
+                val keySpecPKCS8 = PKCS8EncodedKeySpec(Base64.decode(privateKeyString))
+                val privateKey = KeyFactory.getInstance("RSA").generatePrivate(keySpecPKCS8)
+                val token = JWT.create()
+                    .withAudience(audience)
+                    .withIssuer(issuer)
+                    .withClaim("username",username)
+                    .withExpiresAt(Date(System.currentTimeMillis() + 60000))
+                    .sign(Algorithm.RSA256(publicKey as RSAPublicKey, privateKey as RSAPrivateKey))
+                return token
+            }
+
+            val session = UserSession(userId = username, role = role)
+            call.sessions.set(session)
+            call.respond(hashMapOf("token" to makeJwtToken()))
+```
+
+The token generated is like `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwOi8vMC4wLjAuMDo4MDgwL2hlbGxvIiwiaXNzIjoiaHR0cDovLzAuMC4wLjA6ODA4MC8iLCJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzYwOTQ2NDQzfQ.UvhAWa7zmk8uDzWEOSHegSCra5LWsEsuXVKpWENzhceq7VVNP5V3XnLl0hEWDdUJn3SZjbV1RUqW5ZQKrpPWDg`.
+It means `{"alg":"RS256","typ":"JWT"}{"aud":"http://0.0.0.0:8080/hello","iss":"http://0.0.0.0:8080/","username":"admin","exp":1760946443}`
+
+It has been said that when RS256 is used other nodes need to sync the public secret regularly. This can be done with a static plugin. 
+`staticFiles(".well-known", File("certs"), "jwks.json")`  
+
+The public json file can be downloaded by the link http://localhost:8080/.well-known/jwks.json 
