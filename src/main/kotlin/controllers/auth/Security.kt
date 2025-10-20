@@ -3,11 +3,18 @@ package io.github.sw.controllers.auth
 import com.auth0.jwk.JwkProviderBuilder
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.github.sw.controllers.auth.AuthTypeConsts.BASIC_AUTH
 import io.github.sw.controllers.auth.AuthTypeConsts.SESSION_AUTH
 import io.ktor.client.*
+import io.ktor.client.call.body
 import io.ktor.client.engine.apache.*
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.http.*
+import io.ktor.serialization.jackson.jackson
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -16,7 +23,9 @@ import io.ktor.server.request.receiveParameters
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.apache.http.HttpHost
 import java.io.File
 import java.security.KeyFactory
 import java.security.interfaces.RSAPrivateKey
@@ -30,7 +39,23 @@ object AuthTypeConsts {
     const val BASIC_AUTH = "basic-auth"
     const val SESSION_AUTH = "session-auth"
 }
+
 fun Application.configureSecurity() {
+    val _httpClient = HttpClient(Apache) {
+        install(ContentNegotiation) {
+            jackson {
+                registerModule(KotlinModule.Builder().build())
+                configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+            }
+        }
+
+        engine {
+            customizeClient {
+                setProxy(HttpHost("127.0.0.1", 7890, "http"))
+            }
+        }
+    }
     authentication {
         basic(name = BASIC_AUTH) {
             realm = "Ktor Server"
@@ -82,10 +107,10 @@ fun Application.configureSecurity() {
                     requestMethod = HttpMethod.Post,
                     clientId = System.getenv("GOOGLE_CLIENT_ID"),
                     clientSecret = System.getenv("GOOGLE_CLIENT_SECRET"),
-                    defaultScopes = listOf("https://www.googleapis.com/auth/userinfo.profile")
+                    defaultScopes = listOf("https://www.googleapis.com/auth/userinfo.profile", "openid", "email")
                 )
             }
-            client = HttpClient(Apache)
+            client = _httpClient
         }
     }
     // Please read the jwt property from the config file if you are using EngineMain
@@ -172,17 +197,45 @@ fun Application.configureSecurity() {
 
         authenticate("auth-oauth-google") {
             get("login") {
-                call.respondRedirect("/callback")
+//                call.respondRedirect("/callback")
             }
         
             get("/callback") {
                 val principal: OAuthAccessTokenResponse.OAuth2? = call.authentication.principal()
-                call.sessions.set(UserSession(principal?.accessToken.toString()))
+                if (principal != null) {
+                    val accessToken = principal.accessToken
+                    val tokenType = principal.tokenType
+                    val scope = principal.extraParameters["scope"]
+                    val idToken = principal.extraParameters["id_token"]
+                    println("Access token: $accessToken")
+                    println("Scope: $scope")
+                    println("ID token: $idToken")
+                    val userInfo = getPersonalGreeting(_httpClient, accessToken)
+                    call.sessions.set(UserSession(principal?.accessToken.toString()))
+                }
                 call.respondRedirect("/hello")
             }
+
+
+
         }
     }
 }
+
+suspend fun getPersonalGreeting(
+    httpClient: HttpClient,
+    accessToken: String
+): UserInfo = httpClient.get("https://www.googleapis.com/oauth2/v3/userinfo") {
+    header(HttpHeaders.Authorization, "Bearer $accessToken")
+}.body()
+
+@Serializable
+data class UserInfo(
+    val id: String?,
+    val name: String?,
+    @SerialName("given_name") val givenName: String?,
+    val picture: String?,
+)
 
 @Serializable
 data class UserSession(

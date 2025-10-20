@@ -412,3 +412,101 @@ It has been said that when RS256 is used other nodes need to sync the public sec
 `staticFiles(".well-known", File("certs"), "jwks.json")`  
 
 The public json file can be downloaded by the link http://localhost:8080/.well-known/jwks.json 
+
+## Oauth2 and OpenID
+
+First, enable auth-oauth. In the example, it's about google. 
+
+Second, To fill all the info, you have to open https://console.cloud.google.com/apis/credentials 
+and CREATE CREDENTIALS and choose OAuth client ID. To run the example, give the following info to Google. 
+
+```text
+Authorised JavaScript origins: http://localhost:8080.
+
+Authorised redirect URIs: http://localhost:8080/callback.
+```
+Then you will be given a clientId and a client secret. Keep them carefully by yourself, and config them as environments for your Ktor program.  
+`authorizeUrl` and `accessTokenUrl` are both fixed. `defaultScopes` is the scopes you want from Google. You can consult google to learn more scope. 
+In the example, `profile openid email` are requested.
+
+An httpclient needs to given as well, for the oauth plugin makes request to google in your call back but before the lambda you give to the call back.
+```kotlin
+authentication {
+        oauth("auth-oauth-google") {
+            urlProvider = { "http://localhost:8080/callback" }
+            providerLookup = {
+                OAuthServerSettings.OAuth2ServerSettings(
+                    name = "google",
+                    authorizeUrl = "https://accounts.google.com/o/oauth2/auth",
+                    accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
+                    requestMethod = HttpMethod.Post,
+                    clientId = System.getenv("GOOGLE_CLIENT_ID"),
+                    clientSecret = System.getenv("GOOGLE_CLIENT_SECRET"),
+                    defaultScopes = listOf("https://www.googleapis.com/auth/userinfo.profile", "openid", "email")
+                )
+            }
+            client = _httpClient
+        }
+    }
+
+val _httpClient = HttpClient(Apache) {
+    install(ContentNegotiation) {
+        jackson {
+            registerModule(KotlinModule.Builder().build())
+            configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+        }
+    }
+
+    engine {
+        customizeClient {
+            setProxy(HttpHost("127.0.0.1", 7890, "http"))
+        }
+    }
+}
+```
+
+Third, I have mentioned call back. Before the call back, a login action is provided, which redirect to google oauth url.  
+In the call back, Google returns you access token and scopes. If you need the exact user name and other info, another request 
+is sent in `getPersonalGreeting` to Google to obtain the info.
+
+```kotlin
+authenticate("auth-oauth-google") {
+    get("login") {
+//                call.respondRedirect("/callback")
+    }
+
+    get("/callback") {
+        val principal: OAuthAccessTokenResponse.OAuth2? = call.authentication.principal()
+        if (principal != null) {
+            val accessToken = principal.accessToken
+            val tokenType = principal.tokenType
+            val scope = principal.extraParameters["scope"]
+            val idToken = principal.extraParameters["id_token"]
+            println("Access token: $accessToken")
+            println("Scope: $scope")
+            println("ID token: $idToken")
+            val userInfo = getPersonalGreeting(_httpClient, accessToken)
+            call.sessions.set(UserSession(principal?.accessToken.toString()))
+        }
+        call.respondRedirect("/hello")
+    }
+}
+
+
+    suspend fun getPersonalGreeting(
+        httpClient: HttpClient,
+        accessToken: String
+    ): UserInfo = httpClient.get("https://www.googleapis.com/oauth2/v3/userinfo") {
+        header(HttpHeaders.Authorization, "Bearer $accessToken")
+    }.body()
+
+    @Serializable
+    data class UserInfo(
+        val id: String?,
+        val name: String?,
+        @SerialName("given_name") val givenName: String?,
+        val picture: String?,
+    )
+
+```
